@@ -1,3 +1,15 @@
+if Config.Framework == 'qbox' then
+    function IsJobBoss(job)
+        local data = QBX.PlayerData
+        return data.job.name == job and data.job.grade.isboss
+    end
+
+    function GetJobLabel(job)
+        local jobInfo = exports.qbx_core:GetJobs()[job]
+        return jobInfo and jobInfo.label or 'None'
+    end
+end
+
 if Config.Framework == 'qb' then
     local QBCore = exports['qb-core']:GetCoreObject()
     local PlayerData = QBCore.Functions.GetPlayerData()

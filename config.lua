@@ -1,5 +1,5 @@
 Config = {
-    Framework = 'qb', -- 'qb'
+    Framework = 'qb', -- 'qbox', 'qb'
     Notify = 'ox', -- 'qb', 'ox', 'snappy-phone'
     Inventory = 'ox_inventory', -- 'ox_inventory'
     Banking = 'qb-banking', -- 'qb-banking', 'snipe-banking', 'Renewed-Banking', 'qb-management', 'fd_banking', 'okokBanking'

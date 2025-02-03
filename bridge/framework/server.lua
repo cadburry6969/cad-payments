@@ -1,3 +1,25 @@
+if Config.Framework == 'qbox' then
+    function GetJobLabel(job)
+        local jobInfo = exports.qbx_core:GetJobs()[job]
+        return jobInfo and jobInfo.label or 'None'
+    end
+    function GetPlayer(src)
+        local player = exports.qbx_core:GetPlayer(src)
+        return player and {
+            source = player.PlayerData.source,
+            name = string.format('%s %s', player.PlayerData.charinfo.firstname, player.PlayerData.charinfo.lastname),
+            cash = player.PlayerData.money.cash,
+            bank = player.PlayerData.money.bank,
+            addMoney = function(mtype, amount, reason)
+                return player.Functions.AddMoney(mtype, amount, reason)
+            end,
+            removeMoney = function(mtype, amount, reason)
+                return player.Functions.RemoveMoney(mtype, amount, reason)
+            end
+        }
+    end
+end
+
 if Config.Framework == 'qb' then
     local QBCore = exports['qb-core']:GetCoreObject()
 
