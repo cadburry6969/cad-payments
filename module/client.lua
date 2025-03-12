@@ -1,5 +1,5 @@
 ---#region FUNCTIONS
-function ShowChargeMenu(jobName)
+function OpenChargeMenu(jobName)
     local input = lib.inputDialog('Billing Register', {
         {type = 'number', label = 'Person ID', icon = 'credit-card', required = true, min = 1},
         {type = 'number', label = 'Amount', icon = 'credit-card', required = true, min = 1},
@@ -13,7 +13,7 @@ function ShowChargeMenu(jobName)
         if not input[4] then Notify("Payment mode not provided") return end
         TriggerServerEvent('payments:server:charge', lib.math.round(input[1]), lib.math.round(input[2]), input[3], input[4], jobName)
     end
-end
+end exports('OpenChargeMenu', OpenChargeMenu)
 
 function OpenCashRegister(jobName)
     local cash = lib.callback.await('payments:server:checkCash', false, jobName)
@@ -28,33 +28,7 @@ function OpenCashRegister(jobName)
         Wait(math.random(200, 600))
         TriggerServerEvent('payments:server:collectCashinRegister', jobName, amount)
     end
-end
-
-local function ShowRegister(jobName)
-    lib.registerContext({
-        id = 'payment_register',
-        title = 'Register',
-        options = {
-            {
-                title = 'Charge Customer',
-                description = 'Charge a nearby customer',
-                icon = 'cash-register',
-                onSelect = function()
-                    ShowChargeMenu(jobName)
-                end
-            },
-            {
-                title = 'Collect Cash',
-                description = 'Collect cash from register',
-                icon = 'cash-register',
-                onSelect = function()
-                    OpenCashRegister(jobName)
-                end
-            },
-        }
-    })
-    lib.showContext('payment_register')
-end exports('ShowRegister', ShowRegister)
+end exports('OpenCashRegister', OpenCashRegister)
 ---#endregion FUNCTIONS
 
 ---#region EVENTS
@@ -91,51 +65,3 @@ lib.callback.register("payments:requestPayment", function(amount, reason)
     return response
 end)
 ---#endregion CALLBACKS
-
----#region THREADS
-CreateThread(function()
-    for _, data in pairs(Config.Registers) do
-        local point = lib.points.new({
-            coords = vec3(data.coords.x, data.coords.y, data.coords.z),
-            distance = data.distance,
-            name = data.name,
-            job = data.job
-        })
-        function point:onEnter()
-            lib.showTextUI('[E] Access Register')
-        end
-        function point:onExit()
-            lib.hideTextUI()
-        end
-        function point:nearby()
-            if self.currentDistance < 2 and IsControlJustReleased(0, 46) then
-                if IsJobBoss(self.job) then
-                    lib.registerContext({
-                        id = 'payments_register',
-                        title = self.name,
-                        options = {
-                            {
-                                title = 'Charge Customer',
-                                icon = 'fa-solid fa-cash-register',
-                                onSelect = function()
-                                    ShowChargeMenu(self.job)
-                                end
-                            },
-                            {
-                                title = 'Collect Cash',
-                                icon = 'fa-solid fa-cash-register',
-                                onSelect = function()
-                                    OpenCashRegister(self.job)
-                                end
-                            }
-                        }
-                    })
-                    lib.showContext('payments_register')
-                else
-                    Notify('You dont have access to this register', 'error')
-                end
-            end
-        end
-    end
-end)
----#endregion THREADS

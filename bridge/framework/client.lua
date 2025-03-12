@@ -12,9 +12,9 @@ end
 
 if Config.Framework == 'qb' then
     local QBCore = exports['qb-core']:GetCoreObject()
-    local PlayerData = QBCore.Functions.GetPlayerData()
 
     function IsJobBoss(job)
+        local PlayerData = QBCore.Functions.GetPlayerData()
         return PlayerData.job.name == job and PlayerData.job.grade.isboss
     end
 
@@ -22,10 +22,6 @@ if Config.Framework == 'qb' then
         local jobInfo = QBCore.Shared.Jobs[job]
         return jobInfo and jobInfo.label or 'None'
     end
-
-    RegisterNetEvent('QBCore:Player:SetPlayerData', function(val)
-        PlayerData = val
-    end)
 end
 
 if Config.Inventory == 'ox_inventory' then

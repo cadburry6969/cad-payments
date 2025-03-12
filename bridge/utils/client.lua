@@ -22,3 +22,48 @@ end
 function CancelEmote()
     -- cancel your emote here
 end
+
+CreateThread(function()
+    for _, data in pairs(Config.Registers) do
+        local point = lib.points.new({
+            coords = vec3(data.coords.x, data.coords.y, data.coords.z),
+            distance = data.distance,
+            name = data.name,
+            job = data.job
+        })
+        function point:onEnter()
+            lib.showTextUI('[E] Access Register')
+        end
+        function point:onExit()
+            lib.hideTextUI()
+        end
+        function point:nearby()
+            if self.currentDistance < 2 and IsControlJustReleased(0, 46) then
+                local options = {
+                    {
+                        title = 'Charge Customer',
+                        icon = 'fa-solid fa-cash-register',
+                        onSelect = function()
+                            exports['cad-payments']:OpenChargeMenu(self.job)
+                        end
+                    },
+                }
+                if IsJobBoss(self.job) then
+                    options[#options+1] = {
+                        title = 'Collect Cash',
+                        icon = 'fa-solid fa-cash-register',
+                        onSelect = function()
+                            exports['cad-payments']:OpenCashRegister(self.job)
+                        end
+                    }
+                end
+                lib.registerContext({
+                    id = 'payments_register',
+                    title = self.name,
+                    options = options
+                })
+                lib.showContext('payments_register')
+            end
+        end
+    end
+end)
