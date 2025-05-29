@@ -1,21 +1,17 @@
-local CashRegister = {}
+local resource_name = GetCurrentResourceName()
+
+local loaded_data = LoadResourceFile(resource_name, "register.json")
+local CashRegister = json.decode(loaded_data or '{}')
 
 ---#region JSON FETCH
-local resource_name = GetCurrentResourceName()
-function GetFile()
-    local loaded_data = LoadResourceFile(resource_name, "register.json")
-    local file_data = json.decode(loaded_data or '{}')
-    return file_data
-end
-
-function AddJson(itemname, itemcontent)
+local function addJson(itemname, itemcontent)
     local loaded_data = LoadResourceFile(resource_name, "register.json")
     local file_data = json.decode(loaded_data or '{}')
     file_data[itemname] = itemcontent
     SaveResourceFile(resource_name, "register.json", json.encode(file_data, { indent = true }), -1)
 end
 
-function UpdateJson(itemname, itemcontent)
+local function updateJson(itemname, itemcontent)
     local loaded_data = LoadResourceFile(resource_name, "register.json")
     local file_data = json.decode(loaded_data or '{}')
     if file_data[itemname] ~= nil then
@@ -28,9 +24,82 @@ function UpdateJson(itemname, itemcontent)
 end
 ---#endregion JSON FETCH
 
----#region PAYMENTS
-CashRegister = GetFile()
+---#region TAXATION
+local Taxation = Config.Taxation
+-- Removes the tax & amount from the player for the amount specified
+local function removeBalanceWithTax(src, amount, reason, businessReason, businessName, earnings, dontTakeFee)
+    local percent = 0
+    local char = GetPlayer(src)
+    if not dontTakeFee then
+        local money = char.bank
+        for _, data in pairs(Taxation) do
+            if money >= data.amount then
+                percent = data.percent
+                break
+            end
+        end
+    end
+    if businessName then
+        if not earnings then earnings = amount end
+        AddMoneyToAccount(businessName, earnings, businessReason or ('Payment recieved from '..char.name))
+    end
+    businessName = businessName or 'SWIPE'
+    if not reason then reason = "POS - "..tostring(businessName) end
+    local cardfee = 0
+    if Config.CardPaymentFee and not dontTakeFee then
+        cardfee = lib.math.round(amount * Config.CardPaymentFee, 2)
+        amount = amount + cardfee
+        AddMoneyToAccount(Config.CardFeeAccount, cardfee, "Card Fee Recieved From "..char.name)
+    end
+    local taxamount = lib.math.round(amount * percent)
+    local totalamount = lib.math.round(amount + taxamount, 2)
+    char.removeMoney('bank', totalamount, reason)
+    AddMoneyToAccount(Config.TaxAccount, taxamount, "Payment tax recieved from "..char.name)
+    Notify(src, 'You were charged $'..totalamount..' with $'..cardfee..' card fee and '..percent..'% tax.')
+end
+exports("removeBalanceWithTax", removeBalanceWithTax)
 
+-- returns TaxBracket, TaxPercent
+local function getTaxBracket(src)
+    local player = GetPlayer(src)
+    local money = player.bank
+    for bracket, data in pairs(Taxation) do
+        if money >= data.amount then
+            return bracket, data.percent
+        end
+    end
+    return "none", 0
+end
+exports("GetTaxBracket", getTaxBracket)
+---#endregion TAXATION
+
+---#region EXPORTS
+exports('ChargeMoney', function(playerId, amount, reason)
+    if amount and amount < 0 then return end
+    if reason == nil then reason = "POS - SWIPEONGO" end
+    local player = GetPlayer(playerId)
+    local billtype = lib.callback.await('payments:requestPayment', playerId, amount, reason, 'timeout:15000')
+    if billtype == "cash" then
+        if not HasItem(playerId, 'money', amount) then
+            Notify(playerId, "You dont have enough money", "error")
+            return false
+        end
+        player.removeMoney('cash', amount, reason)
+        return true
+    elseif billtype == "bank" then
+        local balance = player.bank
+        if balance < amount then
+            Notify(playerId, "You dont have enough balance", "error")
+            return false
+        end
+        removeBalanceWithTax(playerId, amount, reason, false, false)
+        return true
+    end
+    return false
+end)
+---#endregion EXPORTS
+
+---#region PAYMENTS
 RegisterNetEvent("payments:server:collectCashinRegister", function(businessName, amount)
     local source = source
     amount = math.abs(amount)
@@ -39,7 +108,7 @@ RegisterNetEvent("payments:server:collectCashinRegister", function(businessName,
             local player = GetPlayer(source)
             if player.addMoney('cash', amount, string.format('Collected from %s register', businessName)) then
                 CashRegister[businessName] = CashRegister[businessName] - amount
-                UpdateJson(businessName, CashRegister[businessName])
+                updateJson(businessName, CashRegister[businessName])
             else
                 Notify(source, "Your hands arent empty to have more cash", "error")
             end
@@ -48,7 +117,7 @@ RegisterNetEvent("payments:server:collectCashinRegister", function(businessName,
         end
     else
         CashRegister[businessName] = 0
-        UpdateJson(businessName, 0)
+        updateJson(businessName, 0)
     end
 end)
 
@@ -101,14 +170,14 @@ RegisterNetEvent("payments:server:payPopup", function(hasaccept, amount, billtyp
             if commission > 0 then tplayer.addMoney('cash', commission, "Recieved commision on a payment") end
             if CashRegister[businessName] then
                 CashRegister[businessName] = CashRegister[businessName] + earnings
-                UpdateJson(businessName, CashRegister[businessName])
+                updateJson(businessName, CashRegister[businessName])
             else
                 CashRegister[businessName] = earnings
-                AddJson(businessName, earnings)
+                addJson(businessName, earnings)
             end
             Sendlog(businessName, 'Recieved Payment (Bank) (Register)', string.format("%s charged %s for $%d", player.name, tplayer.name, amount))
         else
-            RemoveBalanceWithTax(source, amount, reason, string.format("Recieved Payment through Register (%s)", player.name), businessName, earnings)
+            removeBalanceWithTax(source, amount, reason, string.format("Recieved Payment through Register (%s)", player.name), businessName, earnings)
             if commission > 0 then tplayer.addMoney('bank', commission, "Recieved commision on a payment") end
             Sendlog(businessName, 'Recieved Payment (Bank) (Register)', string.format("%s charged %s for $%d", player.name,  tplayer.name, amount))
         end
@@ -131,7 +200,12 @@ RegisterNetEvent('payments:server:sendPaymentRequest', function(rdata, businessN
         local sChar = GetPlayer(source)
         local tChar = GetPlayer(playerId)
         local displayName = businessName or sChar.name
-        lib.callback('phone:client:receiveConfirmationPopup', playerId, function(data)
+        CreateThread(function()
+            local data = lib.callback.await('payments:client:confirmationPopup', playerId, {
+                name = displayName,
+                amount = amount,
+                reason = reason,
+            })
             if data.status then
                 if billtype == "cash" then
                     if not HasItem(playerId, 'money', amount) then
@@ -141,7 +215,6 @@ RegisterNetEvent('payments:server:sendPaymentRequest', function(rdata, businessN
                     end
                     tChar.removeMoney('cash', amount, reason)
                     Notify(source, 'Person has accepted the payment', 'success')
-                    print(businessName)
                     if businessName then
                         local commision = 0
                         if Config.POSCommissions[businessName] then
@@ -168,10 +241,10 @@ RegisterNetEvent('payments:server:sendPaymentRequest', function(rdata, businessN
                             if commision > 0 then sChar.addMoney('bank', commision, 'Recieved commision from '..businessName) end
                         end
                         local earnings = amount-commision
-                        RemoveBalanceWithTax(playerId, amount, string.format("%s (%s)", reason, sChar.name), string.format("Received Payment (POS) from %s for %s", sChar.name, reason), businessName, earnings)
+                        removeBalanceWithTax(playerId, amount, string.format("%s (%s)", reason, sChar.name), string.format("Received Payment (POS) from %s for %s", sChar.name, reason), businessName, earnings)
                         Sendlog(businessName, 'Recieved Payment (Bank) (POS)', string.format("%s charged %s for $%d (Reason: %s)", sChar.name, tChar.name, amount, reason))
                     else
-                        RemoveBalanceWithTax(playerId, amount, string.format("%s (%s)", reason, sChar.name))
+                        removeBalanceWithTax(playerId, amount, string.format("%s (%s)", reason, sChar.name))
                         sChar.addMoney('bank', amount, string.format("Recieved Payment through POS (%s)", sChar.name))
                     end
                     Notify(source, 'Person has accepted the payment', 'success')
@@ -179,84 +252,9 @@ RegisterNetEvent('payments:server:sendPaymentRequest', function(rdata, businessN
             else
                 Notify(source, 'Person rejected the payment', 'error')
             end
-        end, {title = 'Payment Request: '..string.upper(displayName), description = string.format('Payment of $%d requested for %s', amount, reason),icon = 'credit-card'})
+        end)
     else
         Notify(source, 'Person too far', 'error')
     end
 end)
 ---#endregion PAYMENTS
-
----#region EXPORTS
-exports('ChargeMoney', function(playerId, amount, reason)
-    if amount and amount < 0 then return end
-    if reason == nil then reason = "POS - SWIPEONGO" end
-    local player = GetPlayer(playerId)
-    local billtype = lib.callback.await('payments:requestPayment', playerId, amount, reason, 'timeout:15000')
-    if billtype == "cash" then
-        if not HasItem(playerId, 'money', amount) then
-            Notify(playerId, "You dont have enough money", "error")
-            return false
-        end
-        player.removeMoney('cash', amount, reason)
-        return true
-    elseif billtype == "bank" then
-        local balance = player.bank
-        if balance < amount then
-            Notify(playerId, "You dont have enough balance", "error")
-            return false
-        end
-        RemoveBalanceWithTax(playerId, amount, reason, false, false)
-        return true
-    end
-    return false
-end)
----#endregion EXPORTS
-
----#region TAXATION
-local Taxation = Config.Taxation
--- Removes the tax & amount from the player for the amount specified
-function RemoveBalanceWithTax(src, amount, reason, businessReason, businessName, earnings, dontTakeFee)
-    local percent = 0
-    local char = GetPlayer(src)
-    if not dontTakeFee then
-        local money = char.bank
-        for _, data in pairs(Taxation) do
-            if money >= data.amount then
-                percent = data.percent
-                break
-            end
-        end
-    end
-    if businessName then
-        if not earnings then earnings = amount end
-        AddMoneyToAccount(businessName, earnings, businessReason or ('Payment recieved from '..char.name))
-    end
-    businessName = businessName or 'SWIPE'
-    if not reason then reason = "POS - "..tostring(businessName) end
-    local cardfee = 0
-    if Config.CardPaymentFee and not dontTakeFee then
-        cardfee = lib.math.round(amount * Config.CardPaymentFee, 2)
-        amount = amount + cardfee
-        AddMoneyToAccount(Config.CardFeeAccount, cardfee, "Card Fee Recieved From "..char.name)
-    end
-    local taxamount = lib.math.round(amount * percent)
-    local totalamount = lib.math.round(amount + taxamount, 2)
-    char.removeMoney('bank', totalamount, reason)
-    AddMoneyToAccount(Config.TaxAccount, taxamount, "Payment tax recieved from "..char.name)
-    Notify(src, 'You were charged $'..totalamount..' with $'..cardfee..' card fee and '..percent..'% tax.')
-end
-exports("RemoveBalanceWithTax", RemoveBalanceWithTax)
-
--- returns TaxBracket, TaxPercent
-function GetTaxBracket(src)
-    local player = GetPlayer(src)
-    local money = player.bank
-    for bracket, data in pairs(Taxation) do
-        if money >= data.amount then
-            return bracket, data.percent
-        end
-    end
-    return "none", 0
-end
-exports("GetTaxBracket", GetTaxBracket)
----#endregion TAXATION

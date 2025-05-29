@@ -1,9 +1,15 @@
-if Config.Framework == 'qbox' then
-    function GetJobLabel(job)
+function GetJobLabel(job)
+    if GetResourceState('qbx_core') == 'started' then
         local jobInfo = exports.qbx_core:GetJobs()[job]
         return jobInfo and jobInfo.label or 'None'
+    elseif GetResourceState('qb-core') == 'started' then
+        local jobInfo = exports['qb-core']:GetCoreObject().Shared.Jobs[job]
+        return jobInfo and jobInfo.label or 'None'
     end
-    function GetPlayer(src)
+end
+
+function GetPlayer(src)
+    if GetResourceState('qbx_core') == 'started' then
         local player = exports.qbx_core:GetPlayer(src)
         return player and {
             source = player.PlayerData.source,
@@ -17,18 +23,8 @@ if Config.Framework == 'qbox' then
                 return player.Functions.RemoveMoney(mtype, amount, reason)
             end
         }
-    end
-end
-
-if Config.Framework == 'qb' then
-    local QBCore = exports['qb-core']:GetCoreObject()
-
-    function GetJobLabel(job)
-        local jobInfo = QBCore.Shared.Jobs[job]
-        return jobInfo and jobInfo.label or 'None'
-    end
-    function GetPlayer(src)
-        local player = QBCore.Functions.GetPlayer(src)
+    elseif GetResourceState('qb-core') == 'started' then
+        local player = exports['qb-core']:GetCoreObject().Functions.GetPlayer(src)
         return player and {
             source = player.PlayerData.source,
             name = string.format('%s %s', player.PlayerData.charinfo.firstname, player.PlayerData.charinfo.lastname),
@@ -44,51 +40,39 @@ if Config.Framework == 'qb' then
     end
 end
 
-if Config.Inventory == 'ox_inventory' then
-    function HasItem(src, item, amount)
+function HasItem(src, item, amount)
+    if GetResourceState('ox_inventory') == 'started' then
         local count = exports.ox_inventory:GetItem(src, item, nil, true)
         return (count and count >= amount) or 0
     end
-    function AddItem(src, item, amount, metadata)
+end
+
+function AddItem(src, item, amount, metadata)
+    if GetResourceState('ox_inventory') == 'started' then
         return exports.ox_inventory:AddItem(src, item, amount, metadata)
     end
-    function RemoveItem(src, item, amount)
-        return exports.ox_inventory:RemoveItem(src, item, amount)
-    end
-else
-    function HasItem(src, item, amount)
-        return exports[Config.Inventory]:HasItem(src, item, amount)
-    end
-    function AddItem(src, item, amount, metadata)
-        return exports[Config.Inventory]:AddItem(src, item, amount, nil, metadata)
-    end
-    function RemoveItem(src, item, amount)
+end
+
+function RemoveItem(src, item, amount)
+    if GetResourceState('ox_inventory') == 'started' then
         return exports.ox_inventory:RemoveItem(src, item, amount)
     end
 end
 
-if Config.Banking == 'qb-banking' then
-    function AddMoneyToAccount(accountName, amount, reason)
+function AddMoneyToAccount(accountName, amount, reason)
+    if GetResourceState('qb-banking') == 'started' then
         return exports['qb-banking']:AddMoney(accountName, amount, reason)
-    end
-elseif Config.Banking == 'snipe-banking' then
-    function AddMoneyToAccount(accountName, amount, reason)
+    elseif GetResourceState('snipe-banking') == 'started' then
         return exports['snipe-banking']:AddMoneyToAccount(accountName, amount, reason)
-    end
-elseif Config.Banking == 'Renewed-Banking' then
-    function AddMoneyToAccount(accountName, amount, reason)
+    elseif GetResourceState('Renewed-Banking') == 'started' then
         return exports['Renewed-Banking']:addAccountMoney(accountName, amount)
-    end
-elseif Config.Banking == "qb-management" then
-    function AddMoneyToAccount(accountName, amount, reason)
+    elseif GetResourceState('qb-management') == 'started' then
         return exports["qb-management"]:AddMoney(accountName, amount, reason)
-    end
-elseif Config.Banking == "fd_banking" then
-    function AddMoneyToAccount(accountName, amount, reason)
-        return exports.fd_banking:AddMoney(accountName, amount, reason)
-    end
-elseif Config.Banking == "okokBanking" then
-    function AddMoneyToAccount(accountName, amount, reason)
+    elseif GetResourceState('fd_banking') == 'started' then
+        return exports['fd_banking']:AddMoney(accountName, amount, reason)
+    elseif GetResourceState('okokBanking') == 'started' then
         return exports['okokBanking']:AddMoney(accountName, amount, reason)
+    else
+        return false
     end
 end

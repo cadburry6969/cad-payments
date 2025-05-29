@@ -2,8 +2,9 @@ fx_version "cerulean"
 game "gta5"
 lua54 "yes"
 
-author "Cadburry"
+author "Cadburry (Bytecode Studios)"
 description "Payments system"
+version "0.8"
 
 shared_scripts {
     "@ox_lib/init.lua",
@@ -11,7 +12,6 @@ shared_scripts {
 }
 
 client_scripts {
-    -- "@qbx_core/modules/playerdata.lua",
     "bridge/**/client.lua",
     "module/client.lua"
 }

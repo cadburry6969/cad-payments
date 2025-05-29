@@ -64,4 +64,9 @@ lib.callback.register("payments:requestPayment", function(amount, reason)
     local response = Citizen.Await(promise)
     return response
 end)
+
+lib.callback.register("payments:client:confirmationPopup", function(data)
+    local status = RequestConfirmation(data)
+    return { status = status }
+end)
 ---#endregion CALLBACKS

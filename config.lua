@@ -1,8 +1,6 @@
 Config = {
-    Framework = 'qb', -- 'qbox', 'qb'
-    Notify = 'ox', -- 'qb', 'ox', 'snappy-phone'
-    Inventory = 'ox_inventory', -- 'ox_inventory'
-    Banking = 'qb-banking', -- 'qb-banking', 'snipe-banking', 'Renewed-Banking', 'qb-management', 'fd_banking', 'okokBanking'
+    Notify = 'ox',        -- 'qb', 'ox', 'snappy-phone', 'lb-phone'
+    Phone = 'lb-phone',   -- 'snappy-phone', 'lb-phone'
     TaxAccount = 'state', -- account where all the tax goes to
     Taxation = {
         low = { amount = 100000, percent = 0.01 },
@@ -12,8 +10,8 @@ Config = {
         extreme = { amount = 2000000, percent = 0.05 },
     },
     CardFeeAccount = 'banker', -- account where the fee amount goes
-    CardPaymentFee = 0.025, -- (percentage) 0.025 = 2.5% [false to disable this]
-    POSCommissions = { -- Name | Commission is a percentage eg "0.10" becomes 10%
+    CardPaymentFee = 0.025,    -- (percentage) 0.025 = 2.5% [false to disable this]
+    POSCommissions = {         -- Name | Commission is a percentage eg "0.10" becomes 10%
         police = 0.10,
         ambulance = 0.10,
         mechanic = 0.20,

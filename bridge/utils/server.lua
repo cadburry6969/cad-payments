@@ -1,11 +1,11 @@
 local webhooks = {
-	['police'] = '',
-	['ambulance'] = '',
+    ['police'] = '',
+    ['ambulance'] = '',
     ['mechanic'] = '',
 }
 
 function Notify(src, msg, type)
-	if Config.Notify == 'qb' then
+    if Config.Notify == 'qb' then
         TriggerClientEvent("QBCore:Notify", src, msg, type, 5000)
     elseif Config.Notify == 'ox' then
         TriggerClientEvent("ox_lib:notify", src, { description = msg, type = type, duration = 5000 })
@@ -21,23 +21,23 @@ end
 
 function Sendlog(logName, logType, message)
     if not webhooks[logName] then return end
-	local _data = json.encode({
+    local _data = json.encode({
         username = "Payments Portal",
         embeds = {
-			{
-				title = logType,
-				color = 10650848,
-				author = {
-					name = "Cadburry",
-				},
-				description = message,
-				footer = {
-					text = os.date('%c'),
-				},
-			}
-		}
+            {
+                title = logType,
+                color = 10650848,
+                author = {
+                    name = "Cadburry",
+                },
+                description = message,
+                footer = {
+                    text = os.date('%c'),
+                },
+            }
+        }
     })
-	PerformHttpRequest(webhooks[logName], function() end, 'POST', _data, { ['Content-Type'] = 'application/json' })
+    PerformHttpRequest(webhooks[logName], function() end, 'POST', _data, { ['Content-Type'] = 'application/json' })
 end
 
 lib.addCommand('give_pos', {
