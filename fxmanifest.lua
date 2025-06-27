@@ -4,7 +4,7 @@ lua54 "yes"
 
 author "Cadburry (Bytecode Studios)"
 description "Payments system"
-version "0.8"
+version "0.9"
 
 shared_scripts {
     "@ox_lib/init.lua",
