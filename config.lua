@@ -1,6 +1,6 @@
 Config = {
-    Notify = 'ox',        -- 'qb', 'ox', 'snappy-phone', 'lb-phone'
-    Phone = 'lb-phone',   -- 'snappy-phone', 'lb-phone'
+    Notify = 'ox',        -- 'qb', 'ox', 'snappy-phone', 'lb-phone', 'yseries'
+    Phone = 'lb-phone',   -- 'snappy-phone', 'lb-phone', 'yseries'
     TaxAccount = 'state', -- account where all the tax goes to
     Taxation = {
         low = { amount = 100000, percent = 0.01 },

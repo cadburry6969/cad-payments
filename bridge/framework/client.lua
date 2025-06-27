@@ -23,16 +23,19 @@ function GetJobLabel(job)
 end
 
 CreateThread(function()
-    while GetResourceState('ox_inventory') ~= 'missing' do
-        Wait(2000)
+    local timeout = 30000
+    while GetResourceState('ox_inventory') ~= 'missing' and timeout > 0 do
+        Wait(1000)
+        timeout = timeout - 1000
         if GetResourceState('ox_inventory') == 'started' then
             exports.ox_inventory:displayMetadata({ job = 'Job' })
         end
     end
 end)
 
-exports('useBusinessPos', function(data, slot)
-    if not next(slot.metadata) then Notify("Not valid machine") return end
+-- For Inventory Use
+local function useBusinessPos(data, slot)
+    if not slot.metadata or not next(slot.metadata) then Notify("Not valid machine") return end
     PlayEmote()
     local jobName = slot.metadata?.jobName or GetJobLabel()
     local input = lib.inputDialog('Point of Sale (POS): '..jobName or slot.metadata.job, {
@@ -49,9 +52,14 @@ exports('useBusinessPos', function(data, slot)
         if not input[4] then Notify("Payment mode not provided") return end
         TriggerServerEvent('payments:server:sendPaymentRequest', input, slot.metadata.job)
     end
+end
+RegisterNetEvent('payments:client:useBusinessPos', function(data)
+    useBusinessPos(nil, data)
 end)
+exports('useBusinessPos', useBusinessPos)
 
-exports('useGeneralPos', function(data, slot)
+-- For Inventory Use
+local function useGeneralPos()
     PlayEmote()
     local input = lib.inputDialog('Point of Sale (POS)', {
         {type = 'number', label = 'Person ID', icon = 'credit-card', min = 1},
@@ -67,4 +75,6 @@ exports('useGeneralPos', function(data, slot)
         if not input[4] then Notify("Payment mode not provided") return end
         TriggerServerEvent('payments:server:sendPaymentRequest', input)
     end
-end)
+end
+RegisterNetEvent('payments:client:useGeneralPos', useGeneralPos)
+exports('useGeneralPos', useGeneralPos)

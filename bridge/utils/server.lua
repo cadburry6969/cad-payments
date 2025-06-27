@@ -8,7 +8,11 @@ function Notify(src, msg, type)
     if Config.Notify == 'qb' then
         TriggerClientEvent("QBCore:Notify", src, msg, type, 5000)
     elseif Config.Notify == 'ox' then
-        TriggerClientEvent("ox_lib:notify", src, { description = msg, type = type, duration = 5000 })
+        TriggerClientEvent("ox_lib:notify", src, {
+            description = msg,
+            type = type,
+            duration = 5000
+        })
     elseif Config.Notify == 'snappy-phone' then
         TriggerClientEvent('phone:client:notification', src, {
             title = 'Payment Terminal',
@@ -16,6 +20,18 @@ function Notify(src, msg, type)
             description = msg,
             duration = 5000,
         })
+    elseif Config.Notify == 'lb-phone' then
+        exports["lb-phone"]:SendNotification(src, {
+            title = 'Payment Terminal',
+            content = msg
+        })
+    elseif Config.Notify == 'yseries' then
+        exports.yseries:SendNotification({
+            title = 'Payment Terminal',
+            text = msg,
+            timeout = 5000,
+            icon = 'https://cdn-icons-png.flaticon.com/128/4645/4645352.png'
+        }, 'source', src)
     end
 end
 

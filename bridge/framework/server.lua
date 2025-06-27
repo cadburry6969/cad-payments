@@ -44,18 +44,31 @@ function HasItem(src, item, amount)
     if GetResourceState('ox_inventory') == 'started' then
         local count = exports.ox_inventory:GetItem(src, item, nil, true)
         return (count and count >= amount) or 0
+    elseif GetResourceState('qb-inventory') == 'started' then
+        return exports['qb-inventory']:HasItem(src, item, amount)
+    elseif GetResourceState('qs-inventory') == 'started' then
+        local totalAmount = exports['qs-inventory']:GetItemTotalAmount(src, item)
+        return (totalAmount and totalAmount >= amount)
     end
 end
 
 function AddItem(src, item, amount, metadata)
     if GetResourceState('ox_inventory') == 'started' then
         return exports.ox_inventory:AddItem(src, item, amount, metadata)
+    elseif GetResourceState('qb-inventory') == 'started' then
+        return exports['qb-inventory']:AddItem(src, item, amount, nil, metadata)
+    elseif GetResourceState('qs-inventory') == 'started' then
+        return exports['qs-inventory']:AddItem(src, item, amount, nil, metadata)
     end
 end
 
 function RemoveItem(src, item, amount)
     if GetResourceState('ox_inventory') == 'started' then
         return exports.ox_inventory:RemoveItem(src, item, amount)
+    elseif GetResourceState('qb-inventory') == 'started' then
+        return exports['qb-inventory']:RemoveItem(src, item, amount)
+    elseif GetResourceState('qs-inventory') == 'started' then
+        return exports['qs-inventory']:RemoveItem(src, item, amount)
     end
 end
 
@@ -72,7 +85,45 @@ function AddMoneyToAccount(accountName, amount, reason)
         return exports['fd_banking']:AddMoney(accountName, amount, reason)
     elseif GetResourceState('okokBanking') == 'started' then
         return exports['okokBanking']:AddMoney(accountName, amount, reason)
+    elseif GetResourceState('kartik-banking') == 'started' then
+        return exports['kartik-banking']:AddAccountMoney(accountName, amount, reason)
     else
         return false
     end
 end
+
+CreateThread(function ()
+    local timeout = 60000
+    if GetResourceState('qb-inventory') ~= 'missing' then
+        while GetResourceState('qb-inventory') ~= 'started' and timeout > 0 do
+            Wait(1000)
+            timeout = timeout - 1000
+        end
+        exports['qb-core']:CreateUseableItem('businesspos', function(source, item)
+            local Player = exports['qb-core']:GetPlayer(source)
+	        if not Player.Functions.GetItemByName(item.name) then return end
+            item.metadata = item.info
+            TriggerClientEvent('payments:client:useBusinessPos', source, item)
+        end)
+        exports['qb-core']:CreateUseableItem('generalpos', function(source, item)
+            local Player = exports['qb-core']:GetPlayer(source)
+	        if not Player.Functions.GetItemByName(item.name) then return end
+            TriggerClientEvent('payments:client:useGeneralPos', source)
+        end)
+    elseif GetResourceState('qs-inventory') ~= 'missing' then
+        while GetResourceState('qs-inventory') ~= 'started' and timeout > 0 do
+            Wait(1000)
+            timeout = timeout - 1000
+        end
+        exports['qs-inventory']:CreateUsableItem('generalpos', function(source, item)
+            if item.metadata and item.metadata.quality then
+                TriggerClientEvent('payments:client:useGeneralPos', source, item)
+            end
+        end)
+        exports['qs-inventory']:CreateUsableItem('businesspos', function(source, item)
+            if item.metadata and item.metadata.quality then
+                TriggerClientEvent('payments:client:useBusinessPos', source)
+            end
+        end)
+    end
+end)

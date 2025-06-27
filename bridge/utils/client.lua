@@ -72,6 +72,29 @@ function RequestConfirmation(data)
         end)
         local response = Citizen.Await(result)
         return response
+    elseif Config.Phone == 'yseries' then
+        local result = promise:new()
+        local notificationEvent
+        CreateThread(function()
+            notificationEvent = RegisterNetEvent('yseries:notificationResponse', function(response)
+                result:resolve(true)
+                RemoveEventHandler(notificationEvent)
+            end)
+        end)
+        exports.yseries:SendNotification({
+            title = title,
+            text = description,
+            timeout = 15000,
+            icon = 'https://cdn-icons-png.flaticon.com/128/4645/4645352.png',
+            data  = {
+                serverEvent = 'yseries:notificationResponse'
+            }
+        })
+        SetTimeout(15000, function()
+            result:resolve(false)
+        end)
+        local response = Citizen.Await(result)
+        return response
     end
 end
 
