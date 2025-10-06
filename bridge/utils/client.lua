@@ -18,6 +18,8 @@ function Notify(msg, type)
             content = msg
         }
         exports['lb-phone']:SendNotification(data)
+    elseif Config.Notify == 'yseries' then
+        TriggerServerEvent('yseries:server:qb-phone-bridge:send-notification', 'Payment Terminal', mst, 15000, GetPlayerServerId(PlayerId()))
     end
 end
 
@@ -77,17 +79,34 @@ function RequestConfirmation(data)
         local notificationEvent
         CreateThread(function()
             notificationEvent = RegisterNetEvent('yseries:notificationResponse', function(response)
-                result:resolve(true)
+                result:resolve(response)
                 RemoveEventHandler(notificationEvent)
             end)
         end)
-        exports.yseries:SendNotification({
+        lib.callback.await('yseries:custom:sendMail', false, {
             title = title,
-            text = description,
-            timeout = 15000,
-            icon = 'https://cdn-icons-png.flaticon.com/128/4645/4645352.png',
-            data  = {
-                serverEvent = 'yseries:notificationResponse'
+            sender = 'paymentshub@mayaalokam.com',
+            senderDisplayName = 'Payments Hub',
+            content = description,
+            actions = {
+                {
+                    label = "Accept",
+                    data = {
+                        event = "yseries:notificationResponse",
+                        isServer = false,
+                        data = true,
+                        shouldClose = true
+                    }
+                },
+                {
+                    label = "Decline",
+                    data = {
+                        event = "yseries:notificationResponse",
+                        isServer = false,
+                        data = false,
+                        shouldClose = true
+                    }
+                }
             }
         })
         SetTimeout(15000, function()

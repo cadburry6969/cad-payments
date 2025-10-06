@@ -56,6 +56,11 @@ function Sendlog(logName, logType, message)
     PerformHttpRequest(webhooks[logName], function() end, 'POST', _data, { ['Content-Type'] = 'application/json' })
 end
 
+lib.callback.register('yseries:custom:sendMail', function(source, data)
+    local insertId, received = exports.yseries:SendMail(data, 'source', source)
+    return insertId and received
+end)
+
 lib.addCommand('give_pos', {
     help = 'Provide POS Machine',
     params = {
